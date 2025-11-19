@@ -15,25 +15,28 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <style>
-        /* --- CSS RESET & VARS --- */
-        :root { 
-            --primary: #4f46e5; 
-            --bg-body: #f3f4f6; 
-            --bg-card: #ffffff; 
-            --text-main: #1f2937; 
-            --nav-height: 65px;
-        }
-        [data-theme="dark"] { 
-            --primary: #6366f1; 
-            --bg-body: #111827; 
-            --bg-card: #1f2937; 
-            --text-main: #f3f4f6; 
-        }
+        /* --- CSS --- */
+        :root { --primary: #4f46e5; --bg-body: #f3f4f6; --bg-card: #ffffff; --text-main: #1f2937; --nav-height: 65px; }
+        [data-theme="dark"] { --primary: #6366f1; --bg-body: #111827; --bg-card: #1f2937; --text-main: #f3f4f6; }
 
         * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
         body { font-family: 'Inter', sans-serif; background-color: var(--bg-body); color: var(--text-main); margin: 0; padding-bottom: 120px; overflow-x: hidden; font-size: 15px; }
 
-        /* LOGIN SCREEN */
+        /* NOTIFICAÇÕES (TOASTS) */
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 3000; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        .toast { 
+            background: var(--bg-card); padding: 15px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); 
+            min-width: 300px; max-width: 90vw; animation: slideInRight 0.3s; pointer-events: auto; border-left: 5px solid #ccc;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .toast.danger { border-left-color: #ef4444; }
+        .toast.warning { border-left-color: #f59e0b; }
+        .toast.success { border-left-color: #10b981; }
+        .toast-content strong { display: block; font-size: 0.9rem; margin-bottom: 3px; }
+        .toast-content small { font-size: 0.8rem; opacity: 0.8; }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* LOGIN */
         #auth-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-body); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 15px; overflow-y: auto; }
         .auth-box { background: var(--bg-card); padding: 25px; border-radius: 16px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); width: 100%; max-width: 360px; text-align: center; margin-bottom: 15px; }
         .hidden { display: none !important; }
@@ -48,52 +51,52 @@
         /* HEADER & MENU */
         header { position: sticky; top: 0; background: var(--bg-card); height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .logo { font-weight: 800; color: var(--primary); display: flex; gap: 6px; align-items: center; font-size: 1.2rem; }
-        
         .menu-btn { font-size: 1.8rem; cursor: pointer; color: var(--text-main); background: none; border: none; }
+        
         .menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: none; justify-content: flex-end; }
         .menu-overlay.open { display: flex; }
         .menu-drawer { background: var(--bg-card); width: 80%; max-width: 300px; height: 100%; padding: 20px; display: flex; flex-direction: column; gap: 15px; animation: slideIn 0.2s; }
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
-
         .menu-user-info { padding-bottom: 15px; border-bottom: 1px solid #eee; margin-bottom: 10px; }
-        .menu-user-info strong { font-size: 0.9rem; display: block; overflow: hidden; text-overflow: ellipsis; }
         .menu-item { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 8px; cursor: pointer; transition: 0.2s; font-size: 0.95rem; background: none; border: none; width: 100%; text-align: left; color: var(--text-main); }
-        .menu-item:hover { background: var(--bg-body); }
         .menu-item.logout { color: #ef4444; margin-top: auto; }
 
         /* COMMON UI */
         .page { display: none; padding: 15px; max-width: 800px; margin: 0 auto; }
         .page.active { display: block; animation: fade 0.3s; }
         @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
-        
         .card { background: var(--bg-card); border-radius: 12px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); position: relative; }
+        
+        /* Widgets */
         .balance-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 15px; }
         .stat-box { text-align: center; padding: 8px 4px; display: flex; flex-direction: column; justify-content: center; }
         .stat-box small { font-size: 0.65rem; opacity: 0.7; }
         .val-big { font-size: 0.8rem; font-weight: bold; display: block; margin-top: 4px; }
-        
         .text-green { color: #10b981; } .text-red { color: #ef4444; } .text-purple { color: #8b5cf6; }
+        
+        /* Lists */
         .list-row { display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); padding: 12px; margin-bottom: 8px; border-radius: 10px; border-left: 4px solid transparent; font-size: 0.9rem;}
         .border-fixo { border-left-color: var(--primary); } .border-var { border-left-color: #f59e0b; } .border-income { border-left-color: #10b981; } .border-invest { border-left-color: #8b5cf6; }
         .border-note { border-left-color: #ec4899; }
-        
         .fixed-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
         .status-badge { font-size: 0.65rem; padding: 2px 6px; border-radius: 8px; margin-left: 4px; font-weight: bold; }
         .st-paid { background: #dcfce7; color: #166534; } .st-late { background: #fee2e2; color: #991b1b; } .st-warn { background: #fef3c7; color: #92400e; } .st-open { background: #e0e7ff; color: #3730a3; }
         
+        /* Projects */
         .progress-bg { background: #e5e7eb; height: 8px; border-radius: 8px; overflow: hidden; margin: 8px 0; }
         .progress-fill { height: 100%; width: 0%; transition: width 1s; }
         .fill-debt { background: #f59e0b; } .fill-goal { background: #10b981; }
         .project-header { display: flex; justify-content: space-between; font-size: 0.9rem;}
 
+        /* Footer & Nav */
         .app-footer { text-align: center; font-size: 0.7rem; color: #9ca3af; margin-top: 20px; padding-top: 10px; border-top: 1px solid #eee; }
         .bottom-nav { position: fixed; bottom: 0; width: 100%; height: 60px; background: var(--bg-card); display: flex; justify-content: space-around; align-items: center; z-index: 90; border-top: 1px solid #eee; padding-bottom: env(safe-area-inset-bottom); }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: #9ca3af; background: none; border: none; font-size: 0.65rem; cursor: pointer; }
         .nav-item.active { color: var(--primary); font-weight: bold; }
         .nav-item i { font-size: 1.3rem; margin-bottom: 2px; }
-
         .fab { position: fixed; bottom: 75px; right: 15px; background: var(--primary); color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; border: none; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4); cursor: pointer; z-index: 95; }
         
+        /* Modals */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; display: none; justify-content: center; align-items: center; }
         .modal-overlay.open { display: flex; }
         .modal-card { background: var(--bg-card); width: 90%; max-width: 380px; padding: 20px; border-radius: 16px; max-height: 90vh; overflow-y: auto; }
@@ -106,18 +109,16 @@
         .quick-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
         .tag { padding: 5px 10px; border-radius: 15px; background: #e5e7eb; font-size: 0.75rem; cursor: pointer; border: 1px solid transparent; display: flex; align-items: center; gap: 4px;}
         .tag.fuel { background: #fee2e2; color: #ef4444; } .tag.income { background: #dcfce7; color: #166534; }
-
         .chart-wrapper { position: relative; height: 200px; width: 100%; margin-bottom: 10px; }
-        
-        /* Ajustes para os novos gráficos */
-        .swipe-hint { text-align: center; font-size: 0.7rem; opacity: 0.5; margin-top: -10px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
+    <div id="toast-container"></div>
+
     <div id="auth-screen">
         <div class="auth-box">
-            <h1 style="color: var(--primary);">Minhas Finanças</h1>
+            <h1 style="color: var(--primary);">FinMaster Cloud</h1>
             <p style="opacity: 0.7;">Controle financeiro sincronizado</p>
             <input type="email" id="login-email" class="form-input" placeholder="Email">
             <input type="password" id="login-pass" class="form-input" placeholder="Senha">
@@ -127,7 +128,7 @@
             <p id="auth-msg" style="margin-top: 10px; font-size: 0.8rem; color: red;"></p>
         </div>
         <div class="auth-footer-links">
-            <a href="https://wa.me/19993562075" target="_blank" class="btn-whatsapp"><i class="ph ph-whatsapp-logo" style="font-size: 1.1rem;"></i>Conheça outras soluções!</a>
+            <a href="https://wa.me/SEU_NUMERO_WHATSAPP" target="_blank" class="btn-whatsapp"><i class="ph ph-whatsapp-logo" style="font-size: 1.1rem;"></i> Suporte</a>
             <div class="pix-card">
                 <small style="font-weight:bold; color: var(--primary); font-size: 0.8rem;">🚀 Contribua com o projeto</small>
                 <div class="pix-key" id="pixKeyText">4716124e-6815-4f85-8248-d58f9c0822f8</div>
@@ -138,7 +139,6 @@
     </div>
 
     <div id="app-screen" class="hidden">
-        
         <header>
             <div class="logo"><i class="ph ph-cloud-check"></i> Minhas Finanças</div>
             <button class="menu-btn" id="tour-menu-btn" onclick="toggleMenu()"><i class="ph ph-list"></i></button>
@@ -150,17 +150,11 @@
                     <h3>Menu</h3>
                     <i class="ph ph-x" style="font-size:1.5rem; cursor:pointer;" onclick="toggleMenu()"></i>
                 </div>
-                
-                <div class="menu-user-info">
-                    <small>Logado como:</small>
-                    <strong id="user-display">carregando...</strong>
-                </div>
-
+                <div class="menu-user-info"><small>Logado como:</small><strong id="user-display">carregando...</strong></div>
                 <div style="margin-bottom: 10px;" id="tour-date-input">
                     <small style="display:block; margin-bottom:5px;">Mês de Referência:</small>
                     <input type="month" id="monthInput" class="form-input" style="margin:0;">
                 </div>
-
                 <button class="menu-item" onclick="startTour(true)"><i class="ph ph-question"></i> Ajuda / Tour</button>
                 <button class="menu-item" onclick="toggleTheme()"><i class="ph ph-moon"></i> Alternar Tema</button>
                 <div style="flex:1"></div>
@@ -183,28 +177,18 @@
                 <h3 style="margin-bottom: 10px; font-size: 1rem;">📅 Fixos do Mês</h3>
                 <div id="fixedWidgetContainer"></div>
             </div>
-            
             <div class="card">
                 <h3>Fluxo Diário</h3>
-                <div class="chart-wrapper">
-                    <canvas id="chartDaily"></canvas>
-                </div>
+                <div class="chart-wrapper"><canvas id="chartDaily"></canvas></div>
             </div>
-            
             <div class="card">
                 <h3>Comparativo Geral</h3>
-                <div class="chart-wrapper">
-                    <canvas id="chartBar"></canvas>
-                </div>
+                <div class="chart-wrapper"><canvas id="chartBar"></canvas></div>
             </div>
-
             <div class="card">
                 <h3>Distribuição (Por Categoria)</h3>
-                <div class="chart-wrapper">
-                    <canvas id="chartMain"></canvas>
-                </div>
+                <div class="chart-wrapper"><canvas id="chartMain"></canvas></div>
             </div>
-            
             <div class="pix-card" style="margin-bottom: 10px;">
                 <small style="font-weight:bold; color: var(--primary); font-size:0.8rem">🚀 Apoie o Desenvolvedor</small>
                 <div class="pix-key" id="pixKeyTextInternal" style="font-size:0.7rem">4716124e-6815-4f85-8248-d58f9c0822f8</div>
@@ -247,7 +231,6 @@
             <button class="nav-item" onclick="navTo('notebook')"> <i class="ph ph-notebook"></i> Caderno </button>
             <button class="nav-item" onclick="navTo('projects')"> <i class="ph ph-rocket-launch"></i> Metas </button>
         </nav>
-
         <button class="fab" id="tour-fab" onclick="openContextModal()"> <i class="ph ph-plus"></i> </button>
     </div>
 
@@ -281,7 +264,6 @@
             </form>
         </div>
     </div>
-
     <div class="modal-overlay" id="modal-notebook">
         <div class="modal-card">
             <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
@@ -290,7 +272,7 @@
             </div>
             <form id="form-notebook">
                 <label style="font-size:0.8rem">Descrição</label> <input type="text" id="n-desc" class="form-input" required>
-                <label style="font-size:0.8rem">Valor Parcela</label> <input type="number" id="n-amount" class="form-input" placeholder="Ex.Tenis Shein" step="0.01" required>
+                <label style="font-size:0.8rem">Valor Parcela</label> <input type="number" id="n-amount" class="form-input" step="0.01" required>
                 <div style="display:flex; gap:10px;">
                     <div style="flex:1"><label style="font-size:0.8rem">Parcelas</label><input type="number" id="n-parcels" class="form-input" value="1" min="1" required></div>
                     <div style="flex:1"><label style="font-size:0.8rem">1º Venc.</label><input type="date" id="n-date" class="form-input" required></div>
@@ -299,7 +281,6 @@
             </form>
         </div>
     </div>
-
     <div class="modal-overlay" id="modal-proj">
         <div class="modal-card">
             <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
@@ -338,7 +319,7 @@ const firebaseConfig = {
         let currentUser = null;
         let data = { transactions: [], fixedTemplates: [], generatedMonths: [], projects: [], notebook: [] };
         let currentType = 'expense';
-        let chartInstances = {}; // Armazena todos os gráficos
+        let chartInstances = {};
         let currentPage = 'dash';
         let editingId = null;
         let unsubscribe = null; 
@@ -402,11 +383,8 @@ const firebaseConfig = {
                         notebook: cloudData.notebook || []
                     };
                     generateFixedCosts(); renderAll();
-                    
-                    // Verifica Tour na primeira vez
-                    if (!localStorage.getItem('tour_seen_v2')) {
-                        setTimeout(startTour, 1000);
-                    }
+                    checkNotifications(); // NOVO: Checa alertas
+                    if (!localStorage.getItem('tour_seen_v3')) setTimeout(startTour, 1500);
                 } else { save(); }
             });
         }
@@ -429,6 +407,40 @@ const firebaseConfig = {
             }
         }
 
+        // --- NOTIFICAÇÕES ---
+        function checkNotifications() {
+            const container = document.getElementById('toast-container');
+            container.innerHTML = ''; // Limpa anteriores
+            
+            // 1. Pede permissão
+            if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+                Notification.requestPermission();
+            }
+
+            // 2. Filtra contas vencendo
+            const today = new Date(); today.setHours(0,0,0,0);
+            let pending = data.transactions.filter(t => !t.paid && (t.type === 'expense' || t.type === 'expense-fixed'));
+            
+            pending.forEach(t => {
+                const due = new Date(t.date); due.setHours(0,0,0,0);
+                const diff = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
+                
+                if (diff < 0) showToast(`Vencido: ${t.desc}`, 'danger');
+                else if (diff <= 3) showToast(`Vence em ${diff} dias: ${t.desc}`, 'warning');
+            });
+        }
+
+        function showToast(msg, type) {
+            const container = document.getElementById('toast-container');
+            const t = document.createElement('div');
+            t.className = `toast ${type}`;
+            t.innerHTML = `<div class="toast-content"><strong>Atenção Financeira</strong><small>${msg}</small></div>
+                           <i class="ph ph-x" style="cursor:pointer" onclick="this.parentElement.remove()"></i>`;
+            container.appendChild(t);
+            // Remove após 5s
+            setTimeout(() => t.remove(), 6000);
+        }
+
         function renderAll() {
             const currentMonth = monthInput.value;
             const [y, m] = currentMonth.split('-');
@@ -439,9 +451,7 @@ const firebaseConfig = {
 
             let inc=0, exp=0, inv=0, paidBal=0, projBal=0;
             let chartData = { inc:0, exp:0, inv:0 };
-            let dailyData = {}; // Para o gráfico de linha
-
-            // Inicializa dias do mês
+            let dailyData = {}; 
             const daysInMonth = new Date(y, m, 0).getDate();
             for(let i=1; i<=daysInMonth; i++) dailyData[i] = 0;
 
@@ -449,15 +459,13 @@ const firebaseConfig = {
 
             items.forEach(t => {
                 const v = t.amount;
-                // Calcula totais
                 if(t.type==='income'){ projBal+=v; if(t.paid){ inc+=v; paidBal+=v; chartData.inc+=v; }}
                 else if(t.type==='investment'){ projBal-=v; if(t.paid){ inv+=v; paidBal-=v; chartData.inv+=v; }}
                 else { projBal-=v; if(t.paid){ exp+=v; paidBal-=v; chartData.exp+=v; }}
 
-                // Dados Diários (Apenas despesas pagas)
                 if(t.paid && t.type !== 'income') {
                     const day = parseInt(t.date.split('-')[2]);
-                    dailyData[day] += v;
+                    if(dailyData[day] !== undefined) dailyData[day] += v;
                 }
 
                 const li = document.createElement('li');
@@ -489,58 +497,37 @@ const firebaseConfig = {
         }
 
         function updateCharts(pieData, dailyData) {
-            // 1. Distribuição (Doughnut)
             const ctx1 = document.getElementById('chartMain').getContext('2d');
             if(chartInstances.pie) chartInstances.pie.destroy();
             chartInstances.pie = new Chart(ctx1, {
                 type: 'doughnut',
                 data: {
                     labels: ['Invest', 'Desp', 'Sobra'],
-                    datasets: [{
-                        data: [pieData.inv, pieData.exp, Math.max(0, pieData.inc - pieData.exp - pieData.inv)],
-                        backgroundColor: ['#8b5cf6','#ef4444','#10b981'], borderWidth:0
-                    }]
-                },
-                options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right'}} }
+                    datasets: [{ data: [pieData.inv, pieData.exp, Math.max(0, pieData.inc - pieData.exp - pieData.inv)], backgroundColor: ['#8b5cf6','#ef4444','#10b981'], borderWidth:0 }]
+                }, options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right'}} }
             });
 
-            // 2. Fluxo Diário (Line)
             const ctx2 = document.getElementById('chartDaily').getContext('2d');
             if(chartInstances.line) chartInstances.line.destroy();
             chartInstances.line = new Chart(ctx2, {
                 type: 'line',
                 data: {
                     labels: Object.keys(dailyData),
-                    datasets: [{
-                        label: 'Gastos do Dia',
-                        data: Object.values(dailyData),
-                        borderColor: '#ef4444',
-                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                        fill: true, tension: 0.4, pointRadius: 2
-                    }]
-                },
-                options: { responsive:true, maintainAspectRatio:false, scales:{x:{display:false}}, plugins:{legend:{display:false}} }
+                    datasets: [{ label: 'Gastos do Dia', data: Object.values(dailyData), borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', fill: true, tension: 0.4, pointRadius: 2 }]
+                }, options: { responsive:true, maintainAspectRatio:false, scales:{x:{display:false}}, plugins:{legend:{display:false}} }
             });
 
-            // 3. Comparativo (Bar)
             const ctx3 = document.getElementById('chartBar').getContext('2d');
             if(chartInstances.bar) chartInstances.bar.destroy();
             chartInstances.bar = new Chart(ctx3, {
                 type: 'bar',
                 data: {
-                    labels: ['Receitas', 'Despesas', 'Invest'],
-                    datasets: [{
-                        label: 'Valor',
-                        data: [pieData.inc, pieData.exp, pieData.inv],
-                        backgroundColor: ['#10b981', '#ef4444', '#8b5cf6'],
-                        borderRadius: 5
-                    }]
-                },
-                options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
+                    labels: ['Receita', 'Despesa', 'Invest'],
+                    datasets: [{ label: 'Valor', data: [pieData.inc, pieData.exp, pieData.inv], backgroundColor: ['#10b981', '#ef4444', '#8b5cf6'], borderRadius: 5 }]
+                }, options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
             });
         }
 
-        // --- TOUR / GUIA DE USO ---
         function startTour(manual = false) {
             const driver = window.driver.js.driver;
             const driverObj = driver({
@@ -548,17 +535,16 @@ const firebaseConfig = {
                 nextBtnText: 'Próximo', prevBtnText: 'Anterior', doneBtnText: 'Concluir',
                 steps: [
                     { popover: { title: 'Bem-vindo ao FinMaster!', description: 'Vamos fazer um tour rápido para você aprender a usar tudo.' } },
-                    { element: '#tour-fab', popover: { title: '1. Adicione Lançamentos', description: 'Use o botão + para cadastrar salário, compras de mercado, gasolina e investimentos.' } },
-                    { element: '#tour-menu-btn', popover: { title: '2. Menu Principal', description: 'Aqui você troca o Mês, muda o Tema ou sai do aplicativo.' } },
-                    { element: '#tour-nav', popover: { title: '3. Navegação', description: 'Alterne entre o Painel, Extrato, Caderno de anotações e suas Metas/Dívidas.' } },
-                    { element: '.card', popover: { title: '4. Informações', description: 'Acompanhe seu saldo, veja quanto falta pagar e controle os custos fixos aqui.' } },
+                    { element: '#tour-fab', popover: { title: '1. Adicione Lançamentos', description: 'Use o botão + para cadastrar salário, compras e investimentos.' } },
+                    { element: '#tour-menu-btn', popover: { title: '2. Menu', description: 'Troque o mês, o tema ou saia do app aqui.' } },
+                    { element: '#tour-nav', popover: { title: '3. Navegação', description: 'Explore o Extrato, Caderno e Metas.' } },
+                    { element: '.balance-grid', popover: { title: '4. Resumo', description: 'Veja rapidamente quanto entrou e saiu.' } },
                 ]
             });
             driverObj.drive();
-            if(!manual) localStorage.setItem('tour_seen_v2', 'true');
+            if(!manual) localStorage.setItem('tour_seen_v3', 'true');
         }
 
-        // --- OUTRAS FUNÇÕES (IGUAIS À VERSÃO ANTERIOR) ---
         function renderNotebook() {
             const ul = document.getElementById('notebookList'); ul.innerHTML='';
             const notes = [...data.notebook].sort((a,b)=>new Date(a.date)-new Date(b.date));
@@ -655,4 +641,3 @@ const firebaseConfig = {
     </script>
 </body>
 </html>
-
