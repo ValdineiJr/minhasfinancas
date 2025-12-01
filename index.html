@@ -49,9 +49,38 @@
         
         .badge { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; font-size: 0.7rem; font-weight: bold; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg-card); }
 
-        /* AUTH SCREEN */
-        #auth-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-body); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; overflow-y: auto; }
-        .auth-box { background: var(--bg-card); padding: 30px; border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 380px; text-align: center; margin-top: auto; margin-bottom: auto;}
+        /* AUTH SCREEN (COM IMAGEM DE FUNDO) */
+        #auth-screen { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            /* Imagem de fundo com overlay escuro */
+            background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.7)), url('https://images.unsplash.com/photo-1554224155-6726b3ff858f?q=80&w=2000&auto=format&fit=crop') no-repeat center center fixed; 
+            background-size: cover;
+            z-index: 9999; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            padding: 20px; 
+            overflow-y: auto; 
+        }
+        
+        .auth-box { 
+            background: rgba(255, 255, 255, 0.95); 
+            backdrop-filter: blur(10px);
+            padding: 30px; 
+            border-radius: 24px; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3); 
+            width: 100%; 
+            max-width: 380px; 
+            text-align: center; 
+            margin-top: auto; 
+            margin-bottom: auto;
+            color: #1e293b; /* Garante texto escuro no box */
+        }
         .hidden { display: none !important; }
 
         /* UI COMPONENTS */
@@ -132,15 +161,20 @@
         .cat-chip { white-space: nowrap; padding: 6px 14px; border-radius: 20px; background: var(--bg-body); border: 1px solid rgba(0,0,0,0.05); font-size: 0.8rem; cursor: pointer; }
         .cat-chip.active { background: var(--primary); color: white; border-color: var(--primary); }
 
-        /* SUPPORT & FOOTER */
+        /* SUPPORT & FOOTER (Login Style) */
         .support-card { border: 2px dashed #e0e7ff; background: linear-gradient(to bottom right, #fff, #f8fafc); position: relative; overflow: hidden; }
         .support-card h4 { margin: 0 0 5px; color: var(--primary); display: flex; align-items: center; gap: 6px; font-size: 1rem; }
         .pix-box { display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.04); padding: 10px; border-radius: 8px; margin-top: 10px; border: 1px solid rgba(0,0,0,0.05); }
         .pix-key { font-family: monospace; font-size: 0.8rem; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px; }
-        .dev-footer { text-align: center; padding: 20px; font-size: 0.85rem; color: var(--text-muted); width: 100%; }
-        .dev-footer a { color: var(--text-muted); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 500; transition: color 0.2s; }
-        .dev-footer a:hover { color: #25d366; }
+        
+        .dev-footer { text-align: center; padding: 20px; font-size: 0.85rem; color: rgba(255,255,255,0.7); width: 100%; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        .dev-footer a { color: white; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 500; transition: opacity 0.2s; }
+        .dev-footer a:hover { opacity: 0.8; }
         .chart-container { height: 250px; width: 100%; position: relative; margin-top: 10px; }
+        
+        /* Ajuste do footer interno do app para não ficar branco no fundo escuro se necessário */
+        #app-screen .dev-footer { color: var(--text-muted); text-shadow: none; }
+        #app-screen .dev-footer a { color: var(--text-muted); }
     </style>
 </head>
 <body>
@@ -149,21 +183,21 @@
     <div id="auth-screen">
         <div class="auth-box">
             <i class="ph ph-cloud-check" style="font-size: 3rem; color: var(--primary);"></i>
-            <h2 style="margin: 10px 0 5px;">FinMaster v2.4</h2>
-            <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem;">Organize suas finanças com inteligência.</p>
+            <h2 style="margin: 10px 0 5px;">MinhasFinanças v2.5</h2>
+            <p style="color: #64748b; margin-bottom: 20px; font-size: 0.9rem;">Organize suas finanças com inteligência.</p>
             <input type="email" id="login-email" class="form-input" placeholder="Seu E-mail">
             <input type="password" id="login-pass" class="form-input" placeholder="Sua Senha">
             <button class="btn-primary" onclick="doLogin()">Entrar</button>
-            <button class="btn-primary" style="background: transparent; color: var(--text-muted); border: 1px solid #e2e8f0; margin-top: 10px;" onclick="doRegister()">Criar Conta</button>
-            <p id="auth-msg" style="color: var(--secondary); font-size: 0.8rem; margin-top: 10px;"></p>
+            <button class="btn-primary" style="background: transparent; color: #64748b; border: 1px solid #e2e8f0; margin-top: 10px;" onclick="doRegister()">Criar Conta</button>
+            <p id="auth-msg" style="color: #ec4899; font-size: 0.8rem; margin-top: 10px;"></p>
 
             <div style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-                <p style="font-size: 0.85rem; color: var(--text-main); margin-bottom: 8px;">
+                <p style="font-size: 0.85rem; color: #1e293b; margin-bottom: 8px;">
                     🚀 Este projeto é <strong>gratuito!</strong><br>
                     Ajude a manter no ar com qualquer valor:
                 </p>
-                <div class="pix-box">
-                    <span id="pix-key-login" class="pix-key">4716124e-6815-4f85-8248-d58f9c0822f8</span>
+                <div class="pix-box" style="background: #f8fafc;">
+                    <span id="pix-key-login" class="pix-key" style="color: #1e293b;">4716124e-6815-4f85-8248-d58f9c0822f8</span>
                     <button class="icon-btn" style="font-size: 1.2rem; color: var(--primary);" onclick="copyToClip('pix-key-login')">
                         <i class="ph ph-copy"></i>
                     </button>
@@ -172,7 +206,7 @@
         </div>
         <div class="dev-footer">
             <a href="https://wa.me/5519993562075" target="_blank">
-                <i class="ph ph-whatsapp-logo" style="font-size: 1.2rem;"></i> Desenvolvimento por Valdinei Rodrigues | Conheça outras soluções (19) 993562075
+                <i class="ph ph-whatsapp-logo" style="font-size: 1.2rem;"></i> Desenvolvimetno por Valdinei Rodrigues | Conheça outras soluções (19) 993562075
             </a>
         </div>
     </div>
@@ -181,7 +215,7 @@
     <div id="app-screen" class="hidden">
         
         <header>
-            <div class="logo"><i class="ph ph-wallet"></i>MeuFinanceiro</div>
+            <div class="logo"><i class="ph ph-wallet"></i> MinhasFinanças</div>
             <div class="header-actions">
                 <!-- NOTIFICATION BELL -->
                 <button class="icon-btn" onclick="openNotifications()" style="margin-right: 5px;">
