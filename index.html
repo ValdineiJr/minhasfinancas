@@ -220,9 +220,25 @@
                 <div id="dashFixedWidget"></div>
             </div>
 
+            <!-- GRÁFICOS RESTAURADOS -->
             <div class="card">
-                <h3 style="font-size: 1rem; margin: 0 0 15px;">📊 Visão Geral</h3>
+                <h3 style="font-size: 1rem; margin: 0 0 15px;">📊 Status Pagamentos</h3>
+                <div class="chart-container" style="height: 200px;"><canvas id="chartStatus"></canvas></div>
+            </div>
+
+            <div class="card">
+                <h3 style="font-size: 1rem; margin: 0 0 15px;">🌊 Fluxo Diário</h3>
                 <div class="chart-container" style="height: 180px;"><canvas id="chartDaily"></canvas></div>
+            </div>
+
+            <div class="card">
+                <h3 style="font-size: 1rem; margin: 0 0 15px;">📈 Evolução (6 Meses)</h3>
+                <div class="chart-container" style="height: 200px;"><canvas id="chartEvolution"></canvas></div>
+            </div>
+
+            <div class="card">
+                <h3 style="font-size: 1rem; margin: 0 0 15px;">🍰 Por Categoria</h3>
+                <div class="chart-container"><canvas id="chartCategory"></canvas></div>
             </div>
             
             <div class="dev-footer">
@@ -402,11 +418,17 @@
         </div>
     </div>
 
-    <!-- MODAL NOTIFICAÇÕES -->
-    <div class="modal-overlay" id="modal-notif"><div class="modal-card">
-        <h3>Notificações</h3><div id="notif-list"><p style="text-align:center;color:#999">Nada aqui.</p></div>
-        <button class="icon-btn" onclick="closeModal('modal-notif')" style="position:absolute;top:20px;right:20px"><i class="ph ph-x"></i></button>
-    </div></div>
+    <!-- MODAL NOTIFICAÇÕES (COM BOTÃO FECHAR) -->
+    <div class="modal-overlay" id="modal-notif">
+        <div class="modal-card">
+            <h3>Notificações</h3>
+            <div id="notif-list" style="max-height: 60vh; overflow-y:auto; margin-bottom:10px;">
+                <p style="text-align:center;color:#999">Nada aqui.</p>
+            </div>
+            <button class="btn-primary" style="background:#e5e7eb; color:#374151;" onclick="closeModal('modal-notif')">Fechar</button>
+            <button class="icon-btn" onclick="closeModal('modal-notif')" style="position:absolute;top:20px;right:20px"><i class="ph ph-x"></i></button>
+        </div>
+    </div>
 
     <!-- MODAL PROJETOS -->
     <div class="modal-overlay" id="modal-project"><div class="modal-card">
@@ -502,13 +524,18 @@
             let inc=0, exp=0, inv=0, paidSum=0, projSum=0;
             let status = { paid:0, open:0 };
             let daily = {};
+            let catTotals = {};
 
             filtered.forEach(t => {
                 if(t.type==='income') { projSum+=t.amount; if(t.paid){ inc+=t.amount; paidSum+=t.amount; } }
                 else if(t.type==='investment') { projSum-=t.amount; if(t.paid){ inv+=t.amount; paidSum-=t.amount; } }
                 else { 
                     projSum-=t.amount; 
-                    if(t.paid) { exp+=t.amount; paidSum-=t.amount; status.paid+=t.amount; const d=parseInt(t.date.split('-')[2]); daily[d]=(daily[d]||0)+t.amount; }
+                    if(t.paid) { 
+                        exp+=t.amount; paidSum-=t.amount; status.paid+=t.amount; 
+                        const d=parseInt(t.date.split('-')[2]); daily[d]=(daily[d]||0)+t.amount; 
+                        catTotals[t.category] = (catTotals[t.category]||0)+t.amount;
+                    }
                     else status.open+=t.amount;
                 }
             });
@@ -519,11 +546,38 @@
             renderFixedList(); renderProjects(); renderNotes(); renderCards();
             renderDashFixedWidget(filtered);
             
+            // --- GRÁFICOS (RESTORED) ---
+            // 1. Daily
             const ctxD = document.getElementById('chartDaily').getContext('2d');
             const days = Object.keys(daily).sort((a,b)=>a-b);
             if(charts.day) charts.day.destroy();
-            charts.day = new Chart(ctxD, { type: 'bar', data: { labels: days, datasets:[{label:'Gasto',data:Object.values(daily),backgroundColor:'#f87171',borderRadius:4}] }, options:{plugins:{legend:{display:false}},scales:{x:{display:false}}} });
+            charts.day = new Chart(ctxD, { type: 'bar', data: { labels: days, datasets:[{label:'Gasto',data:Object.values(daily),backgroundColor:'#f87171',borderRadius:4}] }, options:{maintainAspectRatio:false, plugins:{legend:{display:false}},scales:{x:{display:false}}} });
+
+            // 2. Status
+            const ctxS = document.getElementById('chartStatus').getContext('2d');
+            if(charts.status) charts.status.destroy();
+            charts.status = new Chart(ctxS, { type: 'pie', data: { labels: ['Pago', 'Aberto'], datasets: [{ data: [status.paid, status.open], backgroundColor: ['#10b981', '#cbd5e1'] }] }, options: { maintainAspectRatio: false } });
+
+            // 3. Category
+            const ctxC = document.getElementById('chartCategory').getContext('2d');
+            if(charts.cat) charts.cat.destroy();
+            charts.cat = new Chart(ctxC, { type: 'doughnut', data: { labels: Object.keys(catTotals), datasets: [{ data: Object.values(catTotals), backgroundColor: ['#ec4899','#8b5cf6','#f59e0b','#10b981','#3b82f6'] }] }, options: { maintainAspectRatio: false, plugins: { legend: { position: 'right' } } } });
+
+            // 4. Evolution
+            const ctxE = document.getElementById('chartEvolution').getContext('2d');
+            if(charts.evo) charts.evo.destroy();
+            const months = getLast6Months();
+            const dBal = [];
+            months.forEach(m => {
+                const mt = data.transactions.filter(t => t.date.startsWith(m) && t.paid && (!t.context || t.context==='personal'));
+                const i = mt.filter(t=>t.type==='income').reduce((a,b)=>a+b.amount,0);
+                const e = mt.filter(t=>t.type.includes('expense')).reduce((a,b)=>a+b.amount,0);
+                dBal.push(i-e);
+            });
+            charts.evo = new Chart(ctxE, { type: 'line', data: { labels: months.map(m=>m.substr(5)), datasets: [{ label: 'Saldo', data: dBal, borderColor: '#4f46e5', fill: true, backgroundColor: 'rgba(79,70,229,0.1)' }] }, options: { maintainAspectRatio: false } });
         }
+
+        function getLast6Months() { const r=[]; for(let i=5;i>=0;i--){ const d=new Date(); d.setMonth(d.getMonth()-i); r.push(d.toISOString().slice(0,7)); } return r; }
 
         function renderBusiness() {
             const bizItems = data.transactions.filter(t => t.context === 'business');
@@ -538,11 +592,11 @@
             document.getElementById('bizProfit').style.color = (inc-exp)>=0 ? '#10b981' : '#ef4444';
 
             const list = document.getElementById('bizList'); list.innerHTML = '';
-            bizItems.slice(0,10).forEach(t => list.appendChild(createListItem(t))); // Show last 10
+            bizItems.slice(0,10).forEach(t => list.appendChild(createListItem(t))); 
 
             const ctx = document.getElementById('chartBiz').getContext('2d');
             if(charts.biz) charts.biz.destroy();
-            charts.biz = new Chart(ctx, { type: 'doughnut', data: { labels:['Entrada','Saída'], datasets:[{data:[inc,exp],backgroundColor:['#10b981','#ef4444']}] }, options:{plugins:{legend:{position:'right'}}} });
+            charts.biz = new Chart(ctx, { type: 'doughnut', data: { labels:['Entrada','Saída'], datasets:[{data:[inc,exp],backgroundColor:['#10b981','#ef4444']}] }, options:{maintainAspectRatio:false, plugins:{legend:{position:'right'}}} });
         }
 
         function renderHistoryMode() {
@@ -833,7 +887,34 @@
         function useCalcResult(){ if(calcTargetInput)document.getElementById('t-amount').value=document.getElementById('calc-display').value; closeModal('modal-calc'); }
         
         function closeModal(id){ document.getElementById(id).classList.remove('open'); }
-        function openNotifications(){ document.getElementById('modal-notif').classList.add('open'); }
+        function openNotifications(){ document.getElementById('modal-notif').classList.add('open'); checkNotifications(); }
+        function checkNotifications() {
+            const today = new Date(); today.setHours(0,0,0,0);
+            const next3Days = new Date(today); next3Days.setDate(today.getDate() + 3);
+            const alerts = data.transactions.filter(t => {
+                if(t.paid || t.type === 'income' || t.type === 'investment') return false;
+                const tDate = new Date(t.date + 'T00:00:00'); 
+                return tDate <= next3Days;
+            });
+            alerts.sort((a,b) => new Date(a.date) - new Date(b.date));
+            const badge = document.getElementById('notif-badge');
+            const list = document.getElementById('notif-list');
+            if(alerts.length > 0) {
+                badge.innerText = alerts.length; badge.style.display = 'flex';
+                list.innerHTML = '';
+                alerts.forEach(t => {
+                    const tDate = new Date(t.date + 'T00:00:00');
+                    const isToday = tDate.getTime() === today.getTime();
+                    const isLate = tDate < today;
+                    let msg = isToday ? 'Vence Hoje!' : (isLate ? 'VENCIDO!' : `Vence em ${t.date.split('-').reverse().join('/')}`);
+                    let color = isLate ? '#ef4444' : (isToday ? '#f59e0b' : '#3b82f6');
+                    const div = document.createElement('div'); div.className = 'notif-item';
+                    div.innerHTML = `<div class="notif-icon"><i class="ph ph-warning-circle" style="color:${color}"></i></div><div style="flex:1"><strong>${t.desc}</strong><br><small style="color:${color};font-weight:bold;">${msg} • ${fmtMoney(t.amount)}</small></div><button class="icon-btn" onclick="togglePaid(${t.id});closeModal('modal-notif')"><i class="ph ph-check-circle" style="color:#10b981"></i></button>`;
+                    list.appendChild(div);
+                });
+            } else { badge.style.display = 'none'; list.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">Tudo em dia!</p>'; }
+        }
+
         function openProjectModal(){ document.getElementById('modal-project').classList.add('open'); }
         function openNoteModal(){ document.getElementById('modal-note').classList.add('open'); }
         
@@ -841,8 +922,7 @@
             currentPage = pg;
             document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden')); document.getElementById('page-'+pg).classList.remove('hidden');
             document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-            // Mapping for nav items highlights
-            const map={'dash':0,'list':1,'business':2,'cards':3,'projects':4}; if(map[pg]!==undefined) document.querySelectorAll('.nav-item')[map[pg]].classList.add('active');
+            const map={'dash':0,'list':1,'business':2,'cards':3,'projects':4,'notes':5}; if(map[pg]!==undefined) document.querySelectorAll('.nav-item')[map[pg]].classList.add('active');
             renderAll();
         }
 
