@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Minhas Finanças</title>
     
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.jsdelivr.net/npm/driver.js@1.0.1/dist/driver.js.iife.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.0.1/dist/driver.css"/>
@@ -515,7 +515,10 @@
 
         function renderAll() {
             if(currentPage==='business') { renderBusiness(); return; }
+            
+            // Define o mês atual com base no input
             const cm = document.getElementById('monthInput').value;
+            
             if(currentPage==='list') { renderHistoryMode(); return; }
 
             const filtered = data.transactions.filter(t => t.date.startsWith(cm) && (!t.context || t.context === 'personal'));
@@ -533,7 +536,9 @@
                     projSum-=t.amount; 
                     if(t.paid) { 
                         exp+=t.amount; paidSum-=t.amount; status.paid+=t.amount; 
-                        const d=parseInt(t.date.split('-')[2]); daily[d]=(daily[d]||0)+t.amount; 
+                        // Corrige fuso horário pegando o dia da string 'YYYY-MM-DD'
+                        const d=parseInt(t.date.split('-')[2]); 
+                        daily[d]=(daily[d]||0)+t.amount; 
                         catTotals[t.category] = (catTotals[t.category]||0)+t.amount;
                     }
                     else status.open+=t.amount;
@@ -546,24 +551,71 @@
             renderFixedList(); renderProjects(); renderNotes(); renderCards();
             renderDashFixedWidget(filtered);
             
-            // --- GRÁFICOS (RESTORED) ---
-            // 1. Daily
+            // --- GRÁFICOS CORRIGIDOS ---
+            
+            // 1. Daily (Fluxo Diário) - Com correção de ordenação
             const ctxD = document.getElementById('chartDaily').getContext('2d');
             const days = Object.keys(daily).sort((a,b)=>a-b);
+            const dailyValues = days.map(d => daily[d]); // Mapeia os valores na mesma ordem dos dias
+            
             if(charts.day) charts.day.destroy();
-            charts.day = new Chart(ctxD, { type: 'bar', data: { labels: days, datasets:[{label:'Gasto',data:Object.values(daily),backgroundColor:'#f87171',borderRadius:4}] }, options:{maintainAspectRatio:false, plugins:{legend:{display:false}},scales:{x:{display:false}}} });
+            charts.day = new Chart(ctxD, { 
+                type: 'bar', 
+                data: { 
+                    labels: days, 
+                    datasets:[{
+                        label:'Gasto',
+                        data: dailyValues, // Usa os valores alinhados
+                        backgroundColor:'#f87171',
+                        borderRadius:4
+                    }] 
+                }, 
+                options:{
+                    maintainAspectRatio:false, 
+                    plugins:{legend:{display:false}},
+                    scales:{x:{display:false}}
+                } 
+            });
 
-            // 2. Status
+            // 2. Status Pagamentos
             const ctxS = document.getElementById('chartStatus').getContext('2d');
             if(charts.status) charts.status.destroy();
-            charts.status = new Chart(ctxS, { type: 'pie', data: { labels: ['Pago', 'Aberto'], datasets: [{ data: [status.paid, status.open], backgroundColor: ['#10b981', '#cbd5e1'] }] }, options: { maintainAspectRatio: false } });
+            // Evita gráfico vazio se tudo for zero
+            const statusData = (status.paid === 0 && status.open === 0) ? [0.1, 0] : [status.paid, status.open];
+            const statusColors = (status.paid === 0 && status.open === 0) ? ['#e2e8f0', '#e2e8f0'] : ['#10b981', '#cbd5e1'];
+            
+            charts.status = new Chart(ctxS, { 
+                type: 'pie', 
+                data: { 
+                    labels: ['Pago', 'Aberto'], 
+                    datasets: [{ 
+                        data: statusData, 
+                        backgroundColor: statusColors,
+                        borderWidth: 0
+                    }] 
+                }, 
+                options: { maintainAspectRatio: false } 
+            });
 
-            // 3. Category
+            // 3. Category (Categorias)
             const ctxC = document.getElementById('chartCategory').getContext('2d');
             if(charts.cat) charts.cat.destroy();
-            charts.cat = new Chart(ctxC, { type: 'doughnut', data: { labels: Object.keys(catTotals), datasets: [{ data: Object.values(catTotals), backgroundColor: ['#ec4899','#8b5cf6','#f59e0b','#10b981','#3b82f6'] }] }, options: { maintainAspectRatio: false, plugins: { legend: { position: 'right' } } } });
+            charts.cat = new Chart(ctxC, { 
+                type: 'doughnut', 
+                data: { 
+                    labels: Object.keys(catTotals), 
+                    datasets: [{ 
+                        data: Object.values(catTotals), 
+                        backgroundColor: ['#ec4899','#8b5cf6','#f59e0b','#10b981','#3b82f6','#6366f1'] 
+                    }] 
+                }, 
+                options: { 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } } } 
+                } 
+            });
 
-            // 4. Evolution
+            // 4. Evolution (Evolução)
             const ctxE = document.getElementById('chartEvolution').getContext('2d');
             if(charts.evo) charts.evo.destroy();
             const months = getLast6Months();
@@ -574,7 +626,21 @@
                 const e = mt.filter(t=>t.type.includes('expense')).reduce((a,b)=>a+b.amount,0);
                 dBal.push(i-e);
             });
-            charts.evo = new Chart(ctxE, { type: 'line', data: { labels: months.map(m=>m.substr(5)), datasets: [{ label: 'Saldo', data: dBal, borderColor: '#4f46e5', fill: true, backgroundColor: 'rgba(79,70,229,0.1)' }] }, options: { maintainAspectRatio: false } });
+            charts.evo = new Chart(ctxE, { 
+                type: 'line', 
+                data: { 
+                    labels: months.map(m=>m.substr(5)), // Mostra apenas MM (ex: 12, 01)
+                    datasets: [{ 
+                        label: 'Saldo', 
+                        data: dBal, 
+                        borderColor: '#4f46e5', 
+                        fill: true, 
+                        backgroundColor: 'rgba(79,70,229,0.1)',
+                        tension: 0.3 // Deixa a linha mais curva e suave
+                    }] 
+                }, 
+                options: { maintainAspectRatio: false } 
+            });
         }
 
         function getLast6Months() { const r=[]; for(let i=5;i>=0;i--){ const d=new Date(); d.setMonth(d.getMonth()-i); r.push(d.toISOString().slice(0,7)); } return r; }
